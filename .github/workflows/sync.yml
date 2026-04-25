@@ -2,8 +2,8 @@ name: Sync Subscription
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: '*/30 * * * *'    # 每30分钟同步一次
+  workflow_dispatch:          # 允许手动触发
 
 permissions:
   contents: write
@@ -32,7 +32,6 @@ jobs:
           git config user.name "sub-bot"
           git config user.email "bot@example.com"
           
-          # 检查是否有变化
           git add sub.txt
           if git diff --cached --quiet; then
             echo "No changes to commit"
@@ -41,7 +40,6 @@ jobs:
           
           git commit -m "Sync subscription $(date -u +%Y-%m-%d_%H:%M)"
           
-          # 自动检测分支名
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
           echo "Current branch: $BRANCH"
           
