@@ -1,25 +1,48 @@
-# .github/workflows/sync.yml
 name: Sync Subscription
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # 每6小时同步一次
-  workflow_dispatch:  # 也可以手动触发
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Fetch subscription
         run: |
-          curl -L -o sub.txt "https://jmssub.net/members/getsub.php?service=658183&id=6e86c465-595b-4a1c-a69e-5e8da5394b90"
-          
+          echo "Downloading subscription..."
+          curl -L -f -o sub.txt "${{ secrets.SUB_URL }}" || {
+            echo "Failed to download subscription"
+            exit 1
+          }
+          echo "Downloaded $(wc -c < sub.txt) bytes"
+          head -c 200 sub.txt
+          echo ""
+
       - name: Commit and push
         run: |
-          git config user.name "bot"
+          git config user.name "sub-bot"
           git config user.email "bot@example.com"
+          
+          # 检查是否有变化
           git add sub.txt
-          git diff --cached --quiet || git commit -m "sync sub"
-          git push
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
+          git commit -m "Sync subscription $(date -u +%Y-%m-%d_%H:%M)"
+          
+          # 自动检测分支名
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          echo "Current branch: $BRANCH"
+          
+          git push origin "$BRANCH"
